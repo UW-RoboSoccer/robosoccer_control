@@ -1,6 +1,7 @@
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
-#include <std_msgs/msg/Float32.hpp>
+#include "std_msgs/msg/float32.hpp"
+#include "std_msgs/msg/string.hpp"
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include "biped_controller_utils.hpp"
@@ -15,7 +16,7 @@ public:
     joint_pub = this->create_publisher<sensor_msgs::msg::JointState>("/joint_cmd", 10); 
 
     footsteps_sub =
-      this->create_subscription<std::msg::String>(
+      this->create_subscription<std_msgs::msg::String>(
         "/footsteps", 10,
         std::bind(&BipedControllerNode::footsteps_callback, this,
               std::placeholders::_1));
@@ -34,13 +35,10 @@ public:
   }
 
 private:
-  void footsteps_callback(
-    const std::msg::String::SharedPtr msg) {
-
+  void footsteps_callback(const std_msgs::msg::String::SharedPtr msg) {
   }
 
-  void target_callback(
-    const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
+  void target_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
    
   }
 
