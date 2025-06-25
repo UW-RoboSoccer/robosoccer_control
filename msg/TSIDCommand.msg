@@ -1,0 +1,9 @@
+std_msgs/Header header
+geometry_msgs/Pose desired_com_pose
+geometry_msgs/Twist desired_com_velocity
+geometry_msgs/Pose left_foot_pose
+geometry_msgs/Pose right_foot_pose
+bool left_foot_contact
+bool right_foot_contact
+float64[] joint_positions
+float64[] joint_velocities 
