@@ -76,9 +76,9 @@ struct TSIDConfig
   double tau_max_scaling = 3.0;
   double v_max_scaling = 10.0;
   
-  // Frame names (matching reference)
-  std::string rf_frame_name = "feet_2";  // Right foot frame
-  std::string lf_frame_name = "feet";    // Left foot frame
+  // Frame names (matching actual URDF)
+  std::string rf_frame_name = "foot";    // Right foot frame
+  std::string lf_frame_name = "foot_2";  // Left foot frame
   
   // Contact normal
   Eigen::Vector3d contactNormal = Eigen::Vector3d(0.0, 0.0, 1.0);

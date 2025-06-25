@@ -12,17 +12,9 @@ class TSIDToTrajectoryBridge : public rclcpp::Node
 public:
   TSIDToTrajectoryBridge() : Node("tsid_to_trajectory_bridge")
   {
-    // Joint names in the order expected by position_controller
+    // Joint names in EXACT order from both TSID config and simulation controller
+    // (Now they match after fixing controllers.yaml!)
     joint_names_ = {
-      "right_shoulder_pitch", "right_shoulder_roll", "right_elbow",
-      "left_shoulder_pitch", "left_shoulder_roll", "left_elbow", 
-      "head_yaw", "head_pitch",
-      "right_hip_pitch", "right_hip_roll", "right_hip_yaw", "right_knee", "right_ankle_pitch",
-      "left_hip_pitch", "left_hip_roll", "left_hip_yaw", "left_knee", "left_ankle_pitch"
-    };
-
-    // TSID joint order (from our config)
-    tsid_joint_names_ = {
       "right_elbow", "right_shoulder_roll", "right_shoulder_pitch",
       "left_elbow", "left_shoulder_roll", "left_shoulder_pitch", 
       "head_pitch", "head_yaw",
@@ -30,8 +22,8 @@ public:
       "left_ankle_pitch", "left_knee", "left_hip_yaw", "left_hip_roll", "left_hip_pitch"
     };
 
-    // Create mapping from TSID order to controller order
-    createJointMapping();
+    // Joint orders now match exactly - no mapping needed!
+    RCLCPP_INFO(this->get_logger(), "Joint orders match exactly - direct 1:1 mapping");
 
     // Publishers and subscribers
     trajectory_pub_ = this->create_publisher<trajectory_msgs::msg::JointTrajectory>(
@@ -47,29 +39,12 @@ public:
   }
 
 private:
-  void createJointMapping()
-  {
-    joint_mapping_.resize(joint_names_.size());
-    
-    for (size_t i = 0; i < joint_names_.size(); ++i) {
-      // Find index of joint_names_[i] in tsid_joint_names_
-      auto it = std::find(tsid_joint_names_.begin(), tsid_joint_names_.end(), joint_names_[i]);
-      if (it != tsid_joint_names_.end()) {
-        joint_mapping_[i] = std::distance(tsid_joint_names_.begin(), it);
-      } else {
-        RCLCPP_ERROR(this->get_logger(), "Joint %s not found in TSID joint names!", joint_names_[i].c_str());
-        joint_mapping_[i] = i; // fallback
-      }
-    }
-
-    RCLCPP_INFO(this->get_logger(), "Joint mapping created for %zu joints", joint_names_.size());
-  }
 
   void tsidCommandCallback(const std_msgs::msg::Float64MultiArray::SharedPtr msg)
   {
-    if (msg->data.size() != tsid_joint_names_.size()) {
+    if (msg->data.size() != joint_names_.size()) {
       RCLCPP_WARN(this->get_logger(), "Received %zu joint commands, expected %zu", 
-                  msg->data.size(), tsid_joint_names_.size());
+                  msg->data.size(), joint_names_.size());
       return;
     }
 
@@ -87,9 +62,9 @@ private:
     point.effort.clear();
     point.time_from_start = rclcpp::Duration::from_nanoseconds(100000000); // 0.1 seconds
 
-    // Map joint positions from TSID order to controller order
+    // Direct 1:1 mapping since joint orders now match exactly!
     for (size_t i = 0; i < joint_names_.size(); ++i) {
-      point.positions[i] = msg->data[joint_mapping_[i]];
+      point.positions[i] = msg->data[i];
     }
 
     traj_msg.points.push_back(point);
@@ -101,9 +76,7 @@ private:
   rclcpp::Publisher<trajectory_msgs::msg::JointTrajectory>::SharedPtr trajectory_pub_;
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr tsid_sub_;
   
-  std::vector<std::string> joint_names_;        // Expected by controller
-  std::vector<std::string> tsid_joint_names_;   // From TSID config
-  std::vector<size_t> joint_mapping_;           // Maps controller index to TSID index
+  std::vector<std::string> joint_names_;        // Joint names (same order for both TSID and simulation)
 };
 
 int main(int argc, char* argv[])

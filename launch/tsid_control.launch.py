@@ -68,7 +68,19 @@ def generate_launch_description():
             emulate_tty=True,
         )
         
-        return [tsid_controller_node]
+        # TSID to Trajectory Bridge Node
+        bridge_node = Node(
+            package='robosoccer_control',
+            executable='tsid_to_trajectory_bridge',
+            name='tsid_to_trajectory_bridge',
+            parameters=[
+                {'use_sim_time': LaunchConfiguration('use_sim_time')}
+            ],
+            output='screen',
+            emulate_tty=True,
+        )
+        
+        return [tsid_controller_node, bridge_node]
 
     return LaunchDescription([
         config_file_arg,

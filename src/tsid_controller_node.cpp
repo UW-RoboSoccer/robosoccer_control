@@ -182,70 +182,50 @@ private:
 
   void tsidCommandCallback(const robosoccer_control::msg::TSIDCommand::SharedPtr msg)
   {
-    // Set CoM target
-    robosoccer_control::TaskSpaceTarget com_target;
-    com_target.position = Eigen::Vector3d(
+    // Set CoM reference using proper TSID API
+    Eigen::Vector3d com_pos(
       msg->desired_com_pose.position.x,
       msg->desired_com_pose.position.y,
       msg->desired_com_pose.position.z);
-    com_target.orientation = Eigen::Quaterniond(
-      msg->desired_com_pose.orientation.w,
-      msg->desired_com_pose.orientation.x,
-      msg->desired_com_pose.orientation.y,
-      msg->desired_com_pose.orientation.z);
-    com_target.linear_velocity = Eigen::Vector3d(
+    Eigen::Vector3d com_vel(
       msg->desired_com_velocity.linear.x,
       msg->desired_com_velocity.linear.y,
       msg->desired_com_velocity.linear.z);
-    com_target.linear_acceleration = Eigen::Vector3d::Zero();
-    com_target.weight = 10.0;
-    com_target.active = true;
+    Eigen::Vector3d com_acc = Eigen::Vector3d::Zero(); // For now
+    
+    tsid_controller_->setCoMReference(com_pos, com_vel, com_acc);
 
-    tsid_controller_->setCoMTarget(com_target);
-
-    // Set foot targets
-    setFootTarget("feet", msg->left_foot_pose, msg->left_foot_contact);    // Left foot
-    setFootTarget("feet_2", msg->right_foot_pose, msg->right_foot_contact); // Right foot
+    // Set foot targets using proper TSID API
+    setFootTarget("foot_2", msg->left_foot_pose, msg->left_foot_contact);   // Left foot
+    setFootTarget("foot", msg->right_foot_pose, msg->right_foot_contact);   // Right foot
 
     // Update posture target if provided
     if (msg->joint_positions.size() == joint_names_.size()) {
       Eigen::VectorXd q_desired = Eigen::Map<const Eigen::VectorXd>(
         msg->joint_positions.data(), msg->joint_positions.size());
-      Eigen::VectorXd v_desired = Eigen::VectorXd::Zero(q_desired.size());
       
-      if (msg->joint_velocities.size() == joint_names_.size()) {
-        v_desired = Eigen::Map<const Eigen::VectorXd>(
-          msg->joint_velocities.data(), msg->joint_velocities.size());
-      }
-      
-      tsid_controller_->setPostureTarget(q_desired, v_desired);
+      tsid_controller_->setPostureReference(q_desired);
     }
   }
 
   void comTargetCallback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
   {
-    robosoccer_control::TaskSpaceTarget com_target;
-    com_target.position = Eigen::Vector3d(
+    Eigen::Vector3d com_pos(
       msg->pose.position.x, msg->pose.position.y, msg->pose.position.z);
-    com_target.orientation = Eigen::Quaterniond(
-      msg->pose.orientation.w, msg->pose.orientation.x,
-      msg->pose.orientation.y, msg->pose.orientation.z);
-    com_target.linear_velocity = Eigen::Vector3d::Zero();
-    com_target.linear_acceleration = Eigen::Vector3d::Zero();
-    com_target.weight = 10.0;
-    com_target.active = true;
+    Eigen::Vector3d com_vel = Eigen::Vector3d::Zero();
+    Eigen::Vector3d com_acc = Eigen::Vector3d::Zero();
 
-    tsid_controller_->setCoMTarget(com_target);
+    tsid_controller_->setCoMReference(com_pos, com_vel, com_acc);
   }
 
   void leftFootTargetCallback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
   {
-    setFootTarget("feet", msg->pose, true);  // Use actual URDF frame name
+    setFootTarget("foot_2", msg->pose, true);  // Use actual URDF frame name
   }
 
   void rightFootTargetCallback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
   {
-    setFootTarget("feet_2", msg->pose, true);  // Use actual URDF frame name
+    setFootTarget("foot", msg->pose, true);  // Use actual URDF frame name
   }
 
   void footstepPlanCallback(const robosoccer_control::msg::FootstepArray::SharedPtr msg)
@@ -272,7 +252,7 @@ private:
       
       // Set foot contact constraints based on support foot
       if (current_step.is_support_foot) {
-        std::string foot_frame = current_step.is_right_foot ? "feet_2" : "feet";
+        std::string foot_frame = current_step.is_right_foot ? "foot" : "foot_2";
         
         // Convert pose to transformation matrix
         Eigen::Matrix4d H_foot = Eigen::Matrix4d::Identity();
@@ -293,7 +273,7 @@ private:
         // Set swing foot if there's a next step
         if (msg->current_step_index + 1 < msg->footsteps.size()) {
           const auto& next_step = msg->footsteps[msg->current_step_index + 1];
-          std::string swing_foot_frame = next_step.is_right_foot ? "feet_2" : "feet";
+          std::string swing_foot_frame = next_step.is_right_foot ? "foot" : "foot_2";
           
           Eigen::Matrix4d H_swing = Eigen::Matrix4d::Identity();
           H_swing(0,3) = next_step.pose.position.x;
@@ -320,34 +300,24 @@ private:
 
   void setFootTarget(const std::string& foot_name, const geometry_msgs::msg::Pose& pose, bool in_contact)
   {
-    robosoccer_control::TaskSpaceTarget foot_target;
-    foot_target.position = Eigen::Vector3d(pose.position.x, pose.position.y, pose.position.z);
-    foot_target.orientation = Eigen::Quaterniond(
-      pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z);
-    foot_target.linear_velocity = Eigen::Vector3d::Zero();
-    foot_target.angular_velocity = Eigen::Vector3d::Zero();
-    foot_target.linear_acceleration = Eigen::Vector3d::Zero();
-    foot_target.angular_acceleration = Eigen::Vector3d::Zero();
-    foot_target.weight = in_contact ? 100.0 : 50.0;  // Higher weight when in contact
-    foot_target.active = true;
-
-    tsid_controller_->setEndEffectorTarget(foot_name, foot_target);
+    // Convert pose to transformation matrix
+    Eigen::Matrix4d H_foot = Eigen::Matrix4d::Identity();
+    H_foot(0,3) = pose.position.x;
+    H_foot(1,3) = pose.position.y;
+    H_foot(2,3) = pose.position.z;
+    
+    // Convert quaternion to rotation matrix
+    Eigen::Quaterniond q(pose.orientation.w, pose.orientation.x,
+                        pose.orientation.y, pose.orientation.z);
+    H_foot.block<3,3>(0,0) = q.toRotationMatrix();
+    
+    tsid_controller_->setFootReference(foot_name, H_foot);
 
     // Update contact constraint
     if (in_contact) {
-      robosoccer_control::ContactConstraint contact;
-      contact.frame_name = foot_name;
-      contact.is_active = true;
-      contact.contact_normal = Eigen::Vector3d(0, 0, 1);  // Assume flat ground
-      contact.friction_coefficient = 0.7;
-      
-      // Set reasonable force bounds for humanoid robot
-      contact.wrench_bounds_min << -100, -100, 0, -10, -10, -10;  // [fx, fy, fz, mx, my, mz]
-      contact.wrench_bounds_max << 100, 100, 1000, 10, 10, 10;
-      
-      tsid_controller_->setContactConstraint(foot_name, contact);
+      tsid_controller_->addFootContact(foot_name);
     } else {
-      tsid_controller_->removeContactConstraint(foot_name);
+      tsid_controller_->removeFootContact(foot_name);
     }
   }
 
@@ -397,23 +367,12 @@ private:
   void initializeDefaultContacts()
   {
     // Set both feet in contact by default (standing pose)
-    // Using actual frame names from the URDF
-    robosoccer_control::ContactConstraint left_contact, right_contact;
+    // Using actual frame names from the URDF and proper TSID API
     
-    left_contact.frame_name = "feet";  // Left foot in URDF
-    left_contact.is_active = true;
-    left_contact.contact_normal = Eigen::Vector3d(0, 0, 1);
-    left_contact.friction_coefficient = 0.7;
-    left_contact.wrench_bounds_min << -100, -100, 0, -10, -10, -10;
-    left_contact.wrench_bounds_max << 100, 100, 1000, 10, 10, 10;
+    tsid_controller_->addFootContact("foot_2");  // Left foot in URDF
+    tsid_controller_->addFootContact("foot");    // Right foot in URDF
 
-    right_contact = left_contact;
-    right_contact.frame_name = "feet_2";  // Right foot in URDF
-
-    tsid_controller_->setContactConstraint("feet", left_contact);
-    tsid_controller_->setContactConstraint("feet_2", right_contact);
-
-    RCLCPP_INFO(this->get_logger(), "Initialized default contact constraints (both feet: 'feet' and 'feet_2')");
+    RCLCPP_INFO(this->get_logger(), "Initialized default contact constraints (both feet: 'foot_2' and 'foot')");
   }
 
   // Member variables

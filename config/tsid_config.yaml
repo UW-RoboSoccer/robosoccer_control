@@ -52,9 +52,9 @@ tsid_controller_node:
     default_friction_coefficient: 0.7
     contact_normal: [0.0, 0.0, 1.0]  # Assume flat ground (z-up)
     
-    # End-Effector Frame Names
-    left_foot_frame: "feet"
-    right_foot_frame: "feet_2"
+    # End-Effector Frame Names (matching actual URDF)
+    left_foot_frame: "foot_2"
+    right_foot_frame: "foot"
     
     # QP Solver Parameters
     solver_tolerance: 1e-6
@@ -102,10 +102,10 @@ tsid_controller_node:
       joint_positions: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     
-    # Important frame names for your robot
+    # Important frame names for your robot (matching actual URDF)
     frame_names:
-      left_foot: "left_foot"
-      right_foot: "right_foot"
+      left_foot: "foot_2"
+      right_foot: "foot"
       left_hand: "left_hand"
       right_hand: "right_hand"
       torso: "torso"
