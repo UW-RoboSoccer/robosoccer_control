@@ -49,7 +49,7 @@ def generate_launch_description():
     )
 
     def launch_setup(context, *args, **kwargs):
-        # TSID Controller Node
+        # TSID Controller Node (Python)
         tsid_controller_node = Node(
             package='robosoccer_control',
             executable='tsid_controller_node',
@@ -68,7 +68,7 @@ def generate_launch_description():
             emulate_tty=True,
         )
         
-        # TSID to Trajectory Bridge Node
+        # TSID to Trajectory Bridge Node (Python)
         bridge_node = Node(
             package='robosoccer_control',
             executable='tsid_to_trajectory_bridge',

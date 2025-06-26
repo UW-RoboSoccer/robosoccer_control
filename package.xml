@@ -3,35 +3,37 @@
 <package format="3">
   <name>robosoccer_control</name>
   <version>0.0.0</version>
-  <description>TSID-based control for robosoccer humanoid robot</description>
+  <description>TSID-based control for robosoccer humanoid robot (Python version)</description>
   <maintainer email="uwrobosoccer@gmail.com">UWRS</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_python</buildtool_depend>
 
   <!-- Core ROS2 dependencies -->
-  <depend>rclcpp</depend>
+  <depend>rclpy</depend>
   <depend>std_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>trajectory_msgs</depend>
   <depend>control_msgs</depend>
-  <depend>ament_index_cpp</depend>
-  
+
   <!-- Message generation -->
   <build_depend>rosidl_default_generators</build_depend>
   <exec_depend>rosidl_default_runtime</exec_depend>
   <member_of_group>rosidl_interface_packages</member_of_group>
 
-  <!-- Mathematical libraries -->
-  <depend>eigen3_cmake_module</depend>
-  <depend>pinocchio</depend>
+  <!-- Python dependencies -->
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-pybind11</exec_depend>
+  <exec_depend>python3-pip</exec_depend>
+  <!-- Pinocchio and TSID Python bindings should be installed via pip or system -->
 
   <!-- Testing -->
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 
   <export>
-    <build_type>ament_cmake</build_type>
+    <build_type>ament_python</build_type>
   </export>
 </package> 
